@@ -2,9 +2,9 @@ import pandas as pd
 
 perch_full = pd.read_csv('./data/perch_data.csv')
 print(perch_full.head())
-perch_full.info()
+perch_full.info() 
 
-# 인풋 데이터 - length height width
+# 인풋 데이터 - length   height   width
 
 import numpy as np
 
@@ -21,19 +21,19 @@ perch_weight = np.array(
 from sklearn.model_selection import train_test_split
 
 train_input, test_input, train_target, test_target = \
-train_test_split(perch_full,perch_weight,random_state=42)
+train_test_split(perch_full, perch_weight, random_state=42)
 
 from sklearn.preprocessing import PolynomialFeatures
 
-# 생성(제곱, 서로곱하기, 1)
+# 생성 (제곱, 서로곱하기, 1)
 poly = PolynomialFeatures()
-poly.fit([[2,3]])
-print(poly.transform([[2,3]]))
+poly.fit([[2, 3]])
+print(poly.transform([[2, 3]]))
 
 # 마지막 1 빼고 생성
 poly = PolynomialFeatures(include_bias=False)
-poly.fit([[2,3]])
-print(poly.transform([[2,3]]))
+poly.fit([[2, 3]])
+print(poly.transform([[2, 3]]))
 
 # 특성공학 적용 (디폴트 2제곱)
 poly = PolynomialFeatures(include_bias=False)
@@ -43,23 +43,21 @@ train_poly = poly.transform(train_input)
 
 print('인풋 데이터 2제곱 특성공학')
 print(train_poly)
-
 print(train_poly.shape)
-
 print(poly.get_feature_names_out())
 
 # 테스트 데이터도 특성공학 적용
 test_poly = poly.transform(test_input)
 
-
-# 선형회귀 학습 
+# 선형회귀 학습!
 from sklearn.linear_model import LinearRegression
 
 lr = LinearRegression()
-lr.fit(train_poly,train_target)
-print('훈련 / 테스트 스코어')
-print(lr.score(train_poly,train_target))
-print(lr.score(test_poly,test_target))
+lr.fit(train_poly, train_target)
+print('훈련/테스트 스코어')
+print(lr.score(train_poly, train_target))
+print(lr.score(test_poly, test_target))
+
 
 # 5제곱까지 해보기
 poly = PolynomialFeatures(degree=5, include_bias=False)
@@ -70,11 +68,12 @@ test_poly = poly.transform(test_input)
 
 print(train_poly.shape)
 
-lr.fit(train_poly,train_target)
+lr.fit(train_poly, train_target)
 print('5제곱 훈련 스코어')
-print(lr.score(train_poly,train_target))
+print(lr.score(train_poly, train_target))
 
 print('5제곱 테스트 스코어')
-print(lr.score(test_poly,test_target))
+print(lr.score(test_poly, test_target))
+
 
 
