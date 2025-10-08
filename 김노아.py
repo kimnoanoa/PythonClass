@@ -1,162 +1,224 @@
-from sklearn.preprocessing import MinMaxScaler
+# 머신러닝 분류모델 학습 코드를 작성하시오.
+
+# =======================================
+
+# 타이타닉 데이터를 이용하여,
+# 수업시간에 배운 머신러닝 모델 2가지를 학습 시킨뒤,
+# 성능을 비교/평가하세요.
+
+# <코드>
+# 전처리 및 간단한 시각화
+# 최적의 파라미터를 찾기 위한 그리드 서치 시행
+# 다양한 성능평가시 ROC 그래프 필수 포함
+
+
+# 코드를 완성하고 결과를 ppt에 정리하세요. (사진 + 설명)
+
+# <ppt>
+# 데이터 전처리를 왜 그렇게 하엿는지 이유를 상세히 기술하세요.
+# 각종 시각화, 그래프, 터미널 출력화면 등 이미지 삽입 (+ 설명)
+# 발표용이 아닌 채점용이므로 디자인은 하지 않아도 됩니다.
+
+# !! 수업시간에 배운 내용들로 하세요 !!
+
+# =======================================
+
+# <제출>
+# 홍길동.py
+# 홍길동.pptx
+
+# 위 두 파일을 압축하지 말고 디스코드 메세지로 보내 주세요.
+# (TMS 업로드는 10/13 에 진행 예정)
+
+# =======================================
+
+# 평가 - 오전
+# 수업 - 오후1
+# 면담 & 프로젝트 팀 발표 - 오후2
+
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
 
-pd.set_option('display.unicode.east_asian_width', True)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_rows', 200)
-pd.set_option('display.width', 1000)
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    classification_report, roc_curve, auc, RocCurveDisplay
+)
 
-# 1.  Seaborn의 titanic 데이터셋을 불러와 titanic 변수에 저장하시오.
-print("======= 1 번 문항 =======")
-titanic = sns.load_dataset('titanic')
-print(titanic)
-print()
+df = sns.load_dataset('titanic')
 
-# 2.  Titanic 데이터의 기본 정보를 조회하시오
-print("======= 2 번 문항 =======")
-print(titanic.info())
-print()
+# 데이터 불러오기
+df = sns.load_dataset('titanic')
 
-# 3.  Titanic 데이터의 행과 열 개수를 조회하고, 몇 차원 배열인지 조회하시오
-print("======= 3 번 문항 =======")
-print("행과 열 개수 : ", titanic.shape)  
-print("차원 : ", titanic.ndim)
-print()  
-  
-# 4.  첫 3행과 마지막 2행을 조회하시오
-print("======= 4 번 문항 =======")
-print(titanic.head(3))
-print(titanic.tail(2))
-print()
+# 필요한 열만 사용
+df = df[['survived', 'pclass', 'sex', 'age', 'sibsp', 'parch', 'fare', 'embarked']]
 
-# 5.  loc을 사용해 첫 5행에서 열 ['survived','pclass','sex','age']만을 가진 데이터프레임 df_loc을 만들고, 출력하시오.
-print("======= 5 번 문항 =======")
-df_loc = titanic.loc[:,['survived','pclass','sex','age']]
-print(df_loc)
-print()
+# 결측치 처리
+# 나이에 결측치가 있을 경우 그 중간값으로 처리함
+# 탑승항구 데이터에 결측치가 있을 경우 최빈값으로 처리함
+df['age'] = df['age'].fillna(df['age'].median())
+df['embarked'] = df['embarked'].fillna(df['embarked'].mode()[0])
 
-# 6.  iloc을 사용해 행 10~14(포함), 열 0~3(포함)을 추출해 df_iloc에 저장하고, 출력하시오.
-print("======= 6 번 문항 =======")
-df_iloc = titanic.iloc[10:15,0:4]
-print(df_iloc)
-print()
+# 범주형 인코딩 (문자열 데이터 수치형 변수로 변환 처리)
+df = pd.get_dummies(df, drop_first=True)
 
-# 7.  원본을 훼손하지 않고(inplace=False) titanic에서 열 ['deck','embark_town']을 드랍한 새 데이터프레임 df_drop_cols를 만드시오.
-print("======= 7 번 문항 =======")
-df_drop_cols = titanic.drop(['deck', 'embark_town'], axis=1, inplace=False)
-print(df_drop_cols)
-print()
+# 타이타닉의 사망자와 생존자를 예측하는 모델
 
-# 8.  결측치가 하나라도 있는 행을 드랍한 데이터프레임 df_dropna_rows를 만드시오.
-print("======= 8 번 문항 =======")
-df_dropna_rows = titanic.dropna()
-print(df_dropna_rows.info())
-print()
+# 학습/테스트 분리 (학습용 80, 테스트용 20)
+X = df.drop('survived', axis=1)
+y = df['survived']
+X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
 
-# 9.  각 열별 결측치 개수를 Series로 구하시오.
-print("======= 9 번 문항 =======")
-missing_values = titanic.isnull().sum()
-print(missing_values)
-print()
 
-# 10.  age 열의 결측치 개수만 따로 출력하시오.
-print("======= 10 번 문항 =======")
-missing_age = titanic['age'].isnull().sum()
-print("age 열의 결측치 개수 : ", missing_age)
-print()
+# -------------의사결정나무 모델 객체 생성-------------
 
-# 11.  age 열의 평균값으로 해당 열의 결측치를 대체한 새로운 시리즈 age_filled를 만드시오(원본 불변).
-print("======= 11 번 문항 =======")
-age_mean = titanic['age'].mean()
-age_filled = titanic['age'].fillna(age_mean)
-print(age_filled)
-print()
+# random_state=42를 설정하면 동일한 결과를 재현할 수 있음 (랜덤성 통제)
+dt_model = DecisionTreeClassifier(random_state=42)
 
-# 12.  대체 전후 age의 결측치 개수를 각각 출력하여 비교하시오.
+# 하이퍼파라미터 후보들을 정의
+# - max_depth: 트리의 최대 깊이 (깊어질수록 복잡한 모델, 과적합 위험 증가)
+# - min_samples_split: 노드를 분할할 최소 샘플 수 (작을수록 트리 분할이 활발히 일어남)
+param_grid = {
+    'max_depth': [3, 5, 10, None],          # None이면 최대한 깊게 분할
+    'min_samples_split': [2, 5, 10]         # 최소 샘플 수 설정
+}
+# GridSearchCV: 모든 조합의 하이퍼파라미터를 테스트하여 최적 조합을 찾음
+# - cv: 교차검증 방식으로 StratifiedKFold 사용 (클래스 비율 유지됨)
+# - scoring: 성능 기준은 정확도(accuracy)
+grid_dt = GridSearchCV(
+    estimator=dt_model,          # 모델
+    param_grid=param_grid,       # 하이퍼파라미터 후보들
+    cv=StratifiedKFold(n_splits=5),  # 교차검증: 데이터를 5개로 나누고 5번 반복
+    scoring='accuracy'           # 평가 기준: 정확도
+)
 
-print("======= 12 번 문항 =======")
-missing_before = titanic['age'].isnull().sum() # 대체 전
-age_mean = titanic['age'].mean()
-age_filled = titanic['age'].fillna(age_mean) # 평균값으로 대체한 시리즈
-missing_after = age_filled.isnull().sum() # 대체 후
-print()
-print("대체 전 age 결측치 개수 : ", missing_before)
-print("대체 후 age 결측치 개수 : ", missing_after)
-print()
+# 학습 데이터(X_train, y_train)로 그리드서치 수행
+# 내부적으로 5-fold 교차검증을 통해 모든 조합을 평가함
+grid_dt.fit(X_train, y_train)
 
-# 13.  embarked 열의 최빈값을 describe() 결과로 확인하시오.
-print("======= 13 번 문항 =======")
-print(titanic['embarked'].describe())
-print()
+# 최적의 하이퍼파라미터를 사용한 모델 추출
+# (교차검증 결과 가장 성능이 좋았던 조합)
+best_dt = grid_dt.best_estimator_
 
-# 14.  그 최빈값으로 embarked의 결측치를 대체한 embarked_filled 시리즈를 만드시오(원본 불변).
-print("======= 14 번 문항 =======")
-mode_embarked = titanic['embarked'].mode()[0] # 최빈값 구하기
-embarked_filled = titanic['embarked'].fillna(mode_embarked) # 결측치 대체한 새로운 시리즈 생성
-# 결과 출력 (결측치 개수 확인)
-print(embarked_filled.isnull().sum())  # 0 이면 결측치 대체 완료
-print()
+# 테스트 데이터(X_test)에 대해 예측 수행
+# → 결과는 생존 여부를 나타내는 클래스 값 (0 또는 1)
+y_pred_dt = best_dt.predict(X_test)
 
-# 15.  수치형 열 중 ['age','fare']만 선택하여 0~1 범위로 Min-Max 스케일링한 데이터프레임 df_scaled를 만드시오(사전 결측 대체 필요 시 적절히 처리).
-print("======= 15 번 문항 =======")
-df_num = titanic[['age','fare']].copy()
+# ROC 곡선을 그리기 위해 클래스 확률값(1일 확률)을 추출
+# → predict_proba는 [0일 확률, 1일 확률] 반환하므로, [1]만 사용
+y_proba_dt = best_dt.predict_proba(X_test)[:, 1]
 
-df_num['age'] = df_num['age'].fillna(df_num['age'].mean())
-df_num['fare'] = df_num['fare'].fillna(df_num['fare'].mean())
-scaler = MinMaxScaler()
-df_scaled_array = scaler.fit_transform(df_num)
-df_scaled = pd.DataFrame(df_scaled_array, columns=['age', 'fare'])
-print(df_scaled)
-print()
+from sklearn.tree import plot_tree
 
-# 16.  스케일링 후 각 열의 최소/최대가 0과 1에 가깝게 되었는지 describe()로 확인하시오.
-print("======= 16 번 문항 =======")
-print(df_scaled.describe())
-print()
+# 의사결정나무 시각화
+plt.figure(figsize=(20,10))
+plot_tree(best_dt, 
+          feature_names=X.columns,  
+          class_names=['Died', 'Survived'],  
+          filled=True,  
+          rounded=True,
+          fontsize=10)
+plt.title('Decision Tree Visualization')
+plt.show()
 
-# 17.  age를 기준으로 아동,청소년,성인,노인 4구간으로 나누어 새 열 age_bin 을 생성하시오. 0,12,18,60,100 
-print("======= 17 번 문항 =======")
-print("그냥 생성만 했어요!!")
-bins = [0, 12, 18, 60, 100]
-labels = ['아동', '청소년', '성인', '노인']
-titanic['age_bin'] = pd.cut(titanic['age'], bins=bins, labels=labels, right=False)
 
-# 18.  각 구간별 인원수를 구하시오.
-print("======= 18 번 문항 =======")
-age_bin_counts = titanic['age_bin'].value_counts().sort_index()
-print(age_bin_counts)
-print()
 
-# 19.  pclass와 sex로 그룹화하여 survived의 평균 생존율을 구하시오.
-print("======= 19 번 문항 =======")
-survival_rate = titanic.groupby(['pclass', 'sex'])['survived'].mean()
-print(survival_rate)
-print()
+# -------------랜덤 포레스트 분류기 객체 생성----------------
 
-# 20.  위 결과를 생존율 내림차순으로 정렬하시오.
-print("======= 20 번 문항 =======")
-survival_rate_sorted = survival_rate.sort_values(ascending=False)
-print(survival_rate_sorted)
-print()
+# 여러 개의 결정 트리를 앙상블하여 과적합을 줄이고 일반화 성능을 높임
+# random_state는 결과 재현을 위해 고정
+rf_model = RandomForestClassifier(random_state=42)
 
-# 21.  age_bin(문항17)과 sex로 그룹화하여 fare의 중앙값을 구하시오.
-print("======= 21 번 문항 =======")
-fare_median = titanic.groupby(['age_bin', 'sex'],observed=True)['fare'].median() # 중앙값
-print(fare_median)
-print()
+# 하이퍼파라미터 그리드 정의
+# n_estimators: 생성할 트리의 개수
+# max_depth: 트리의 최대 깊이
+# min_samples_split: 노드를 분할할 최소 샘플 수
+param_grid_rf = {
+    'n_estimators': [100, 200],       # 트리 수
+    'max_depth': [3, 5, 10],          # 트리 깊이 제한
+    'min_samples_split': [2, 5]       # 분할 최소 샘플 수
+}
 
-# age를 평균값으로 채우지 말고 pclass별 평균값으로 채우기
-# 또는 개인적인 의견으로.. age 널 값 채우고 데이터분석 마무리
-# age_mean2 = titanic['age'].mean()
-# age_filled2 = titanic['age'].fillna(titanic['pclass'].map)
-# print(age_filled2)
+# 최적의 하이퍼파라미터 조합을 찾기 위한 GridSearchCV 설정
+# StratifiedKFold: 각 fold에서 클래스 비율을 유지하며 교차검증
+# scoring='accuracy': 평가 기준은 정확도
+grid_rf = GridSearchCV(
+    rf_model,                        # 사용할 모델
+    param_grid_rf,                   # 하이퍼파라미터 후보
+    cv=StratifiedKFold(n_splits=5), # 5겹 교차검증 (계층화)
+    scoring='accuracy'              # 정확도를 기준으로 최적 모델 탐색
+)
 
-pclass_age_means = titanic.groupby('pclass')['age'].mean()
+# 학습 데이터를 이용해 그리드서치 실행
+# 내부적으로 각 하이퍼파라미터 조합에 대해 5번씩 학습 후 평균 성능 평가
+grid_rf.fit(X_train, y_train)
 
-titanic['age'] = titanic['age'].fillna(titanic['pclass'].map(pclass_age_means))
-print(pclass_age_means)
-print()
+# 가장 성능이 좋았던 모델 추출
+best_rf = grid_rf.best_estimator_
 
-print(titanic)
+# 테스트 세트에 대해 예측 수행 (클래스 예측: 0 또는 1)
+y_pred_rf = best_rf.predict(X_test)
+
+# 테스트 세트에 대해 확률 예측 수행 (ROC Curve 등을 위해 사용)
+# [:, 1] → 생존(클래스 1)일 확률만 추출
+y_proba_rf = best_rf.predict_proba(X_test)[:, 1]
+
+# 랜덤포레스트 시각화
+import numpy as np
+
+importances = best_rf.feature_importances_
+indices = np.argsort(importances)[::-1]
+
+plt.figure(figsize=(10,6))
+plt.title('Feature Importances in Random Forest')
+plt.bar(range(len(importances)), importances[indices], color='skyblue', align='center')
+plt.xticks(range(len(importances)), X.columns[indices], rotation=45, ha='right')
+plt.tight_layout()
+plt.show()
+
+
+# roc_curve, auc 함수 import
+from sklearn.metrics import roc_curve, auc  
+
+# 모델 성능 평가 함수 정의
+def evaluate_model(y_test, y_pred, y_proba, model_name):
+    print(f"----- {model_name} -----")
+    print("Accuracy:", accuracy_score(y_test, y_pred)) # 정확도
+    print("Precision:", precision_score(y_test, y_pred)) # 정밀도
+    print("Recall:", recall_score(y_test, y_pred)) # 재현율
+    print("F1 Score:", f1_score(y_test, y_pred)) # F1스코어 출력
+    print(classification_report(y_test, y_pred)) # 상세 분류 보고서 출력
+    
+    # ROC Curve 계산을 위한 FPR, TPR, Threshold 구하기
+    fpr, tpr, _ = roc_curve(y_test, y_proba)
+    
+    # AUC (Area Under Curve) 계산
+    auc_score = auc(fpr, tpr)
+    
+    # ROC Curve 그래프에 모델 이름과 AUC 점수를 라벨로 붙여서 플롯
+    plt.plot(fpr, tpr, label=f'{model_name} (AUC = {auc_score:.2f})')
+
+plt.figure(figsize=(8,6))
+
+# Decision Tree 모델 평가 및 ROC Curve 그리기
+evaluate_model(y_test, y_pred_dt, y_proba_dt, "Decision Tree")
+
+# Random Forest 모델 평가 및 ROC Curve 그리기
+evaluate_model(y_test, y_pred_rf, y_proba_rf, "Random Forest")
+
+# 대각선 점선 (무작위 분류 기준)
+plt.plot([0,1], [0,1], 'k--')
+
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+
+# 범례 표시 (모델 이름과 AUC 값)
+plt.legend()
+# 그리드 표시
+plt.grid()
+plt.show()
 
