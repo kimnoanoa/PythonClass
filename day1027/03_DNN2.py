@@ -185,3 +185,70 @@ print('\n----- 정답과 비교하여 정확도 계산 -----')
 print(np.mean(val_labels == val_target))
 # ex) 1 1 0 0 1 0 1 0 0 0 0 1 1 1 ..... 의 평균 값
 
+'''
+컴파일 하고 훈련해서 evaluate 사용해도 된다!
+model.compile(optimizer='adam', loss....)...
+'''
+
+# 실험2 - 모델 전체를 불러오기
+model = keras.models.load_model('model-whole.keras')
+# 이미 컴파일이 되어있기 때문에 evaluate 가능
+print('\n----- evaluate 값 -----')
+model.evaluate(val_scaled, val_target)
+
+# ---------- 콜백 ----------
+
+# model = model_fn(keras.layers.Dropout(0.3))
+# model.compile(optimizer='adam', loss='sparse_categorical_crossentropy',
+#               metrics=['accuracy'])
+
+# # ModelCheckpoint - 에포크마다 모델을 저장 (계속 덮어씌움)
+# # save_best_only=True - best 모델을 파일로저장 (이전것 보다 안 좋으면 안 덮어씌움)
+
+# checkpoint_cb = keras.callbacks.ModelCheckpoint('best-model.keras',
+#                                                 save_best_only=True)
+
+# print('\n----- 모델훈련 (베스트 모델 저장) -----')
+# model.fit(train_scaled, train_target, epochs=20,
+#           validation_data=(val_scaled, val_target),
+#           callbacks=[checkpoint_cb])
+# # 베스트 모델 선정 디폴트 = 검증 로스 가장 낮은 모델
+
+# # 위에서 저장된 베스트 모델을 로드하여 evaluate 해보자
+# model = keras.models.load_model('best-model.keras')
+# print('\n----- 베스트 모델 evaluate -----')
+# model.evaluate(val_scaled, val_target)
+
+# ------------------------------------------------------
+
+# 20 에포크 동안 할 필요가 없다.
+# patience=2 >> 2번 연속 검증 점수가 향상되지 않으면 훈련 종료
+# restore_best_weights=True >> 훈련중 가장 낮은 검증손실을 낸 모델 파라미터로 되돌림.
+
+model = model_fn(keras.layers.Dropout(0.3))
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+checkpoint_cb = keras.callbacks.ModelCheckpoint('best-model.keras',
+                                                save_best_only=True)
+early_stopping_cb = keras.callbacks.EarlyStopping(patience=2,
+                                                  restore_best_weights=True)
+
+print('\n----- 모델훈련 (콜백 2개) -----')
+history = model.fit(train_scaled, train_target, epochs=20,
+                    validation_data=(val_scaled, val_target),
+                    callbacks=[checkpoint_cb, early_stopping_cb]) 
+
+# 몇 에포크에서 멈췄는지 출력
+# 출력값 +1 -2 = 베스트 모델
+print('\n----- 멈춘 에포크 시점 -----')
+print(early_stopping_cb.stopped_epoch) # 9 >>>>  9 -1 +2 = 8 (베스트 에포크)
+
+plt.plot(history.history['loss'], label='train')
+plt.plot(history.history['val_loss'], label='val')
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.legend()
+plt.show()
+
+print('\n----- 베스트 모델 evaluate -----')
+model.evaluate(val_scaled, val_target)
