@@ -54,3 +54,4 @@ model.fit(train_scaled, train_target, epochs=5)
 # "기울기 소실" 문제
 
 
+ 
