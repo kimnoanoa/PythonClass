@@ -105,19 +105,19 @@ print()
 model.summary()
 
 # 모델 컴파일
-model.compile(optimizer='adam', loss='??',
-              metrics=['??'])
+model.compile(optimizer='adam', loss='binary_crossentropy',
+              metrics=['accuracy'])
 
 checkpoint_cb = keras.callbacks.ModelCheckpoint('best-simplernn-model.keras',
                                                 save_best_only=True)
 early_stopping_cb = keras.callbacks.EarlyStopping(patience=3,
                                                   restore_best_weights=True)
-?? = model.fit(인풋, 타겟, 에포크100, 배치64,
+history = model.fit(train_oh, train_target, epochs=100, batch_size=64,
                validation_data=(val_oh, val_target),
                callbacks=[checkpoint_cb, early_stopping_cb])
 
-plt.plot(훈련로스, label='train')
-plt.plot(검증로스, label='val')
+plt.plot(history.history['loss'], label='train')
+plt.plot(history.history['val_loss'], label='val')
 plt.xlabel('epoch')
 plt.ylabel('loss')
 plt.show()
