@@ -120,4 +120,51 @@ plt.plot(history.history['loss'], label='train')
 plt.plot(history.history['val_loss'], label='val')
 plt.xlabel('epoch')
 plt.ylabel('loss')
+plt.legend()
+plt.show()
+
+# -------------- 단어 임베딩 사용 --------------
+
+# 원핫 인코딩은 샘플의 크기를 200차원까지 (너무) 늘렸다.
+# 임베딩은 차원을 절약할 수 있다.
+# 덕분에 단어사전은 500으로 늘려보자.
+# (한 문장 단어수는 100으로 동일)
+
+(train_input, train_target), (test_input, test_target) = imdb.load_data(
+    num_words=500)
+train_input, val_input, train_target, val_target = train_test_split(
+    train_input, train_target, test_size=0.2, random_state=42)
+
+train_seq = pad_sequences(train_input, maxlen=100)
+val_seq = pad_sequences(val_input, maxlen=100)
+
+model_emb = keras.Sequential()
+model_emb.add(keras.layers.Input(shape=(100,)))
+model_emb.add(keras.layers.Embedding(500, 16)) # 단어사전 크기 500, 단어마다 차원 16 
+# 임베딩 초기화 범위 [-0.05, 0.05]
+model_emb.add(keras.layers.SimpleRNN(8))
+model_emb.add(keras.layers.Dense(1, activation='sigmoid'))
+
+print()
+model_emb.summary()
+# 8000 = 500x16 임베딩 파라미터
+# 200 = 16x8(웨이트) + 8x8(순환웨이트) + 8(바이어스)
+
+# 모델 컴파일
+model_emb.compile(optimizer='adam', loss='binary_crossentropy',
+              metrics=['accuracy'])
+checkpoint_cb = keras.callbacks.ModelCheckpoint('best-embedding-model.keras',
+                                                save_best_only=True)
+early_stopping_cb = keras.callbacks.EarlyStopping(patience=3,
+                                                  restore_best_weights=True)
+
+history = model_emb.fit(train_seq, train_target, epochs=100, batch_size=64,
+               validation_data=(val_seq, val_target),
+               callbacks=[checkpoint_cb, early_stopping_cb])
+
+plt.plot(history.history['loss'], label='train')
+plt.plot(history.history['val_loss'], label='val')
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.legend()
 plt.show()
